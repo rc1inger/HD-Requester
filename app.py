@@ -452,6 +452,9 @@ def sort_parts():
     return jsonify([dict(part) for part in sorted_parts])
 
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 @app.route('/check_part_in_inventory', methods=['POST'])
 def check_part_in_inventory():
     data = request.get_json()
@@ -461,6 +464,31 @@ def check_part_in_inventory():
     textarea_capacity = data.get('Capacity')
     textarea_part_status = data.get('Part_status')
     unit_sn = data.get('Unit_sn')
+
+    # Edge case check for missing, whitespace-only, or invalid Unit Serial Number
+    if not unit_sn or unit_sn.strip() == '' or not unit_sn.isdigit() or len(unit_sn) < 5:
+        return jsonify({
+            'exists': False,
+            'error': 'missing_serial_number',
+            'message': 'Unit Serial Number is missing or invalid for the Parts Request.'
+        })
+
+
+    # Edge case check for missing or whitespace-only Capacity
+    if not textarea_capacity or textarea_capacity.strip() == '':
+        return jsonify({
+            'exists': False,
+            'error': 'missing_capacity',
+            'message': 'Capacity is missing in the Parts Request.'
+        })
+
+    # Edge case check for missing or whitespace-only Type
+    if not textarea_type or textarea_type.strip() == '':
+        return jsonify({
+            'exists': False,
+            'error': 'missing_type',
+            'message': 'Type is missing in the Parts Request.'
+        })
 
     conn = get_db()
     try:
@@ -476,6 +504,10 @@ def check_part_in_inventory():
         # Convert sqlite3.Row to dictionary
         part = dict(part)
 
+        # Debugging log to verify expected and actual values
+        logging.debug(f"Expected Type: {part['Type']}, Expected Capacity: {part['Capacity']}")
+        logging.debug(f"Actual Type: {textarea_type}, Actual Capacity: {textarea_capacity}")
+
         # Handle the Size mismatch logic
         if part['Type'] in ['PC3', 'PC3L', 'PC4', 'HD']:  # Only relevant types
             if part['Size'] != size:
@@ -488,13 +520,14 @@ def check_part_in_inventory():
                 })
 
         # Mismatch check for Type and Capacity
-        if part['Type'] != textarea_type or part['Capacity'] != textarea_capacity:
+        if part['Type'] != textarea_type or (part['Capacity'] or '') != textarea_capacity:
+            logging.debug("Mismatch detected in Type or Capacity")
             return jsonify({
                 'exists': False,
                 'error': 'mismatch',
                 'message': 'Mismatch in Type or Capacity.',
-                'expected': {'Type': textarea_type, 'Capacity': textarea_capacity},
-                'actual': {'Type': part['Type'], 'Capacity': part['Capacity']}
+                'expected': {'Type': part['Type'], 'Capacity': part['Capacity']},
+                'actual': {'Type': textarea_type, 'Capacity': textarea_capacity}
             })
 
         # Check if already checked-in or checked-out
@@ -517,6 +550,9 @@ def check_part_in_inventory():
 
     finally:
         conn.close()
+
+
+
 
 
 

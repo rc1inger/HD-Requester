@@ -467,13 +467,12 @@ function showModal(dataObject, htmlContent, onConfirm) {
             serial_numbers: [],
             note: noteContent
         };
-
-        if (lines.length < 4) { // Minimum number of lines for valid input
+    
+        if (lines.length < 4) { 
             console.error("Error: Insufficient input data.");
             return null;
         }
-
-        // Parse TID
+    
         dataObject.tid = lines[0].trim();
         if (!dataObject.tid.startsWith("TI") &&
             !dataObject.tid.startsWith("TT") &&
@@ -481,26 +480,22 @@ function showModal(dataObject, htmlContent, onConfirm) {
             console.error("Error: Invalid TID format.");
             return null;
         }
-
+    
         // Parse Unit_sn
         dataObject.unit_sn = lines[1].trim();
-        if (!dataObject.unit_sn) {
-            console.error("Error: Missing unit_sn.");
-            return null;
-        }
-
-        // Parse parts and serial numbers
+    
+        // Proceed with parsing parts, size, and serial numbers as usual
         var i = 2;
         while (lines[i] && !["Laptop", "Desktop", "Server"].includes(lines[i].trim())) {
             var details = lines[i].trim().split(' ');
             var part = {};
-
-            if (details[0].match(/\d+(GB|TB)$/)) { // Drive
+    
+            if (details[0].match(/\d+(GB|TB)$/)) {
                 part = {
                     capacity: details[0],
                     type: details.slice(1).join(' ')
                 };
-            } else { // RAM
+            } else {
                 var capacityIndex = details.findIndex(detail => detail.match(/\d+(GB|MB)$/));
                 part = {
                     type: details.slice(0, capacityIndex).join(' '),
@@ -510,25 +505,24 @@ function showModal(dataObject, htmlContent, onConfirm) {
             dataObject.parts.push(part);
             i++;
         }
-
-        // Parse Size
+    
         dataObject.size = lines[i].trim();
         i++;
-
-        // Parse Serial Numbers
+    
         while (i < lines.length) {
             dataObject.serial_numbers.push(lines[i].trim());
             i++;
         }
-
+    
         if (dataObject.parts.length !== dataObject.serial_numbers.length) {
             console.error("Error: The number of parts does not match the number of serial numbers.");
             alert('Error: The number of parts does not match the number of serial numbers.');
             return null;
         }
-
+    
         return dataObject;
-    } // end parseTextInput
+    }
+    // end parseTextInput
 
     function showLocationModal(partData) {
         const content = `
@@ -555,50 +549,71 @@ function showModal(dataObject, htmlContent, onConfirm) {
     }
 
     function checkInPart(dataObject) {
-        dataObject.parts.forEach((part, index) => {
-            const partSn = dataObject.serial_numbers[index];  // Get the serial number for the current part
-            const unitSn = dataObject.unit_sn;  // Get the Unit Serial Number
+        console.log("Data object received:", dataObject);
     
-            // Validate if Unit Serial Number is missing
-            if (!unitSn) {
+        // Check if Unit Serial Number (Unit_sn) is provided
+        const unitSn = dataObject.unit_sn;
+    
+        // Edge Case: If Unit Serial Number is missing, show a modal and stop further processing
+        if (!unitSn || unitSn.trim() === '') {
+            const content = `
+                <p><strong>Unit Serial Number is missing for the Parts Request.</strong></p>
+                <p>Please provide a valid Unit Serial Number to proceed.</p>
+            `;
+            showModal({ title: 'Error: Missing Unit Serial Number' }, content);
+            return;  // Stop further execution
+        }
+    
+        // Loop through parts and process each individually
+        dataObject.parts.forEach((part, index) => {
+            const partSn = dataObject.serial_numbers[index];
+    
+            // Edge Case: Check for missing Capacity
+            if (!part.capacity || part.capacity.trim() === '') {
                 const content = `
-                    <p><strong>Unit Serial Number is missing.</strong></p>
-                    <p>Please provide a valid serial number for part: ${partSn}.</p>
+                    <p><strong>Capacity is missing for this part.</strong></p>
+                    <p>Please provide a valid capacity for part: ${partSn}.</p>
                 `;
-                showModal({ title: 'Error: Missing Unit Serial Number' }, content);
-                return;  // Prevent further execution for this part
+                showModal({ title: 'Error: Missing Capacity' }, content);
+                return;
             }
     
-            // Prepare the data to be sent to the server including Type and Capacity
+            // Edge Case: Check for missing Type
+            if (!part.type || part.type.trim() === '') {
+                const content = `
+                    <p><strong>Type is missing for this part.</strong></p>
+                    <p>Please provide a valid type for part: ${partSn}.</p>
+                `;
+                showModal({ title: 'Error: Missing Type' }, content);
+                return;
+            }
+    
+            // Prepare data to send to the server
             const partData = {
                 Part_sn: partSn,
                 Type: part.type,
                 Capacity: part.capacity,
                 Size: dataObject.size,
                 Part_status: 'In',
-                Unit_sn: unitSn,  // Include the valid Unit Serial Number here
+                Unit_sn: unitSn,
                 Note: dataObject.note
             };
     
             $.ajax({
-                url: '/check_part_in_inventory',  // Server-side script to check the inventory
+                url: '/check_part_in_inventory',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(partData),
                 success: function (response) {
                     if (response.exists) {
-                        // If part exists and matches type and capacity, update its status to 'In'
-                        const partSpeed = response.part?.Speed || 'N/A';
-                        const partBrand = response.part?.Brand || 'N/A';
-                        const partModel = response.part?.Model || 'N/A';
-    
+                        // Process success response
                         const partDetails = `
                             <div style="display: flex;">
                                 <div style="flex: 1; padding: 8px;">${partData.Type}</div>
                                 <div style="flex: 1; padding: 8px;">${partData.Capacity}</div>
                                 <div style="flex: 1; padding: 8px;">${partData.Size}</div>
-                                <div style="flex: 1; padding: 8px;">${partBrand}</div>
-                                <div style="flex: 1; padding: 8px;">${partModel}</div>
+                                <div style="flex: 1; padding: 8px;">${response.part?.Brand || 'N/A'}</div>
+                                <div style="flex: 1; padding: 8px;">${response.part?.Model || 'N/A'}</div>
                                 <div style="flex: 1; padding: 8px;"><input type="text" id="locationInput" name="location" style="width: 100%;" placeholder="Enter location"></div>
                                 <div style="flex: 1; padding: 8px;">${partSn}</div>
                             </div>
@@ -620,20 +635,18 @@ function showModal(dataObject, htmlContent, onConfirm) {
                         `;
                         showModal({ title: 'Enter Location for Check-in' }, modalContent);
     
-                        // Handle form submission
                         $('#locationSubmitBtn').click(function () {
                             const location = $('#locationInput').val();
                             if (location) {
                                 const partUpdateData = {
                                     Part_sn: partSn,
                                     TID: dataObject.tid,
-                                    Unit_sn: unitSn,  // Include Unit Serial Number here
+                                    Unit_sn: unitSn,
                                     Part_status: 'In',
-                                    Location: location,  // Add location from input
+                                    Location: location,
                                     Note: dataObject.note
                                 };
     
-                                console.log("Data being sent to /update_part_status: ", partUpdateData);
                                 $('#locationSubmitBtn').prop('disabled', true);
     
                                 $.ajax({
@@ -644,15 +657,12 @@ function showModal(dataObject, htmlContent, onConfirm) {
                                     success: function (updateResponse) {
                                         if (updateResponse.status === 'success') {
                                             partsTable.ajax.reload(null, false);
-                                            $('#Modal').css('display', 'none'); // Close modal
+                                            $('#Modal').css('display', 'none');
                                         } else {
-                                            console.error("Failed to check in the part:", updateResponse.message);
                                             alert("Failed to check in the part: " + updateResponse.message);
                                         }
                                     },
                                     error: function (err) {
-                                        console.error("Error updating part status: ", err);
-                                        $('#locationSubmitBtn').prop('disabled', false);
                                         alert('Failed to update part status: ' + err.responseText);
                                     }
                                 });
@@ -662,57 +672,70 @@ function showModal(dataObject, htmlContent, onConfirm) {
                         });
     
                     } else {
-                        // If part does not exist or does not match, show modal with error message
                         handleCheckInErrors(response, partSn);
                     }
                 },
                 error: function (err) {
-                    console.error("Error checking part in inventory: ", err);
                     alert('Error checking part in inventory: ' + err.responseText);
                 }
             });
         });
     }
     
+    
+    
+    
     // Function to handle edge case errors during check-in
-    function handleCheckInErrors(response, partSn) {
-        if (response.error === 'size_mismatch') {
-            const content = `
-                <p><strong>Size mismatch detected:</strong></p>
-                <p>Expected: ${response.expected.Size}</p>
-                <p>Provided: ${response.actual.Size}</p>
-                <p>Please correct the Size.</p>
-            `;
-            showModal({ title: 'Check-in Error: Size Mismatch' }, content);
-        } else if (response.error === 'mismatch') {
-            const content = `
-                <p><strong>Mismatch detected:</strong></p>
-                <p>Expected: ${response.expected.Capacity} ${response.expected.Type}</p>
-                <p>Found: ${response.actual.Capacity} ${response.actual.Type}</p>
-            `;
-            showModal({ title: 'Check-in Error: Mismatch' }, content);
-        } else if (response.error === 'checked-in') {
-            const content = `
-                <p><strong>That part is already checked-in:</strong></p>
-                <p>Serial number: ${partSn}</p>
-            `;
-            showModal({ title: 'Check-in Error: Already checked-in.' }, content);
-        } else if (response.error === 'not_in_inventory') {
-            const content = `
-                <p><strong>That part has never been added to inventory.</strong></p>
-                <p>Serial number: ${partSn}</p>
-                <p>Add item to inventory. Fill in the blanks</p>
-            `;
-            showModal({ title: 'Check-in Error: Part not found in inventory.' }, content);
-        } else if (response.error === 'missing_serial_number') {
-            // New case for missing serial number
-            const content = `
-                <p><strong>Unit Serial Number is missing:</strong></p>
-                <p>Please provide a valid Unit Serial Number for part: ${partSn}.</p>
-            `;
-            showModal({ title: 'Check-in Error: Missing Serial Number' }, content);
+function handleCheckInErrors(response, partSn) {
+    if (response.error === 'size_mismatch') {
+        const content = `
+            <p><strong>Size mismatch detected:</strong></p>
+            <p>Expected: ${response.expected.Size}</p>
+            <p>Provided: ${response.actual.Size}</p>
+            <p>Please correct the Size.</p>
+        `;
+        showModal({ title: 'Check-in Error: Size Mismatch' }, content);
+    } else if (response.error === 'mismatch') {
+        let title = 'Check-in Error: Mismatch';
+        let mismatchAttribute = 'Mismatch detected';
+
+        // Check if Type or Capacity mismatch occurs even if one value is null
+        if (response.expected.Type !== response.actual.Type) {
+            title = 'Check-in Error: Type Mismatch';
+            mismatchAttribute = 'Type mismatch detected';
+        } else if (response.expected.Capacity !== response.actual.Capacity) {
+            title = 'Check-in Error: Capacity Mismatch';
+            mismatchAttribute = 'Capacity mismatch detected';
         }
+
+        const content = `
+            <p><strong>${mismatchAttribute}:</strong></p>
+            <p>Expected: ${response.expected.Capacity || ''} ${response.expected.Type || ''}</p>
+            <p>Found: ${response.actual.Capacity || ''} ${response.actual.Type || ''}</p>
+        `;
+        showModal({ title: title }, content);
+    } else if (response.error === 'checked-in') {
+        const content = `
+            <p><strong>That part is already checked-in:</strong></p>
+            <p>Serial number: ${partSn}</p>
+        `;
+        showModal({ title: 'Check-in Error: Already checked-in.' }, content);
+    } else if (response.error === 'not_in_inventory') {
+        const content = `
+            <p><strong>That part has never been added to inventory.</strong></p>
+            <p>Serial number: ${partSn}</p>
+            <p>Add item to inventory. Fill in the blanks</p>
+        `;
+        showModal({ title: 'Check-in Error: Part not found in inventory.' }, content);
+    } else if (response.error === 'missing_serial_number') {
+        const content = `
+            <p><strong>Unit Serial Number is missing:</strong></p>
+            <p>Please provide a valid Unit Serial Number for part: ${partSn}.</p>
+        `;
+        showModal({ title: 'Check-in Error: Missing Serial Number' }, content);
     }
+}
+
     
     
     function checkOutPart(dataObject) {
