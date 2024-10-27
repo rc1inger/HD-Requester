@@ -483,7 +483,15 @@ function showModal(dataObject, htmlContent, onConfirm) {
     
         // Parse Unit_sn
         dataObject.unit_sn = lines[1].trim();
-    
+        if (!dataObject.unit_sn || dataObject.unit_sn.trim() === '' || isNaN(dataObject.unit_sn) || dataObject.unit_sn.length < 5) {
+            // Show modal for missing or invalid Unit Serial Number
+            const content = `
+                <p><strong>Unit Serial Number is missing or invalid.</strong></p>
+                <p>Please provide a valid Unit Serial Number to proceed.</p>
+            `;
+            showModal({ title: 'Error: Missing Unit Serial Number' }, content);
+            return null; // Stop further processing
+        }
         // Proceed with parsing parts, size, and serial numbers as usual
         var i = 2;
         while (lines[i] && !["Laptop", "Desktop", "Server"].includes(lines[i].trim())) {
@@ -738,72 +746,91 @@ function handleCheckInErrors(response, partSn) {
 
     
     
-    function checkOutPart(dataObject) {
-        dataObject.parts.forEach((part, index) => {
-            const partSn = dataObject.serial_numbers[index];  // Get the serial number for the current part
-            const unitSn = dataObject.unit_sn;  // Get the Unit Serial Number
-    
-            // Validate if Unit Serial Number is missing
-            if (!unitSn) {
-                const content = `
-                    <p><strong>Unit Serial Number is missing.</strong></p>
-                    <p>Please provide a valid serial number for part: ${partSn}.</p>
-                `;
-                showModal({ title: 'Error: Missing Unit Serial Number' }, content);
-                return;  // Prevent further execution for this part
-            }
-    
-            // Prepare the data to be sent to the server including Type and Capacity
-            const partData = {
-                Part_sn: partSn,
-                Type: part.type,
-                Capacity: part.capacity,
-                Size: dataObject.size,
-                Speed: dataObject.Speed,
-                Part_status: 'Out',
-                Unit_sn: unitSn,  // Include the valid Unit Serial Number here
-                Note: dataObject.note
-            };
-    
-            $.ajax({
-                url: '/check_part_in_inventory',  // Server-side script to check the inventory
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(partData),
-                success: function (response) {
-                    if (response.exists) {
-                        // If part exists and matches type and capacity, update its status to 'Out'
-                        $.ajax({
-                            url: '/update_part_status',
-                            type: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify({
-                                Part_sn: partSn,
-                                TID: dataObject.tid,
-                                Unit_sn: unitSn,  // Include Unit Serial Number here
-                                Part_status: 'Out',
-                                Note: dataObject.note
-                            }),
-                            success: function (updateResponse) {
-                                // Refreshes the page after checking out
-                                partsTable.ajax.reload(null, false);
-                            },
-                            error: function (err) {
-                                console.error("Error updating part status: ", err);
-                            }
-                        });
-                    } else {
-                        // If part does not exist or does not match, show modal to handle errors
-                        handleCheckOutErrors(response, partSn, partData);
-                    }
-                },
-                error: function (err) {
-                    console.error("Error checking part out inventory: ", err);
-                    alert('Error checking part out inventory: ' + err.responseText);
+function checkOutPart(dataObject) {
+    dataObject.parts.forEach((part, index) => {
+        const partSn = dataObject.serial_numbers[index];
+        const unitSn = dataObject.unit_sn;
+
+        // Validate if Unit Serial Number is missing
+        if (!unitSn || unitSn.trim() === '') {
+            const content = `
+                <p><strong>Unit Serial Number is missing.</strong></p>
+                <p>Please provide a valid serial number for part: ${partSn}.</p>
+            `;
+            showModal({ title: 'Error: Missing Unit Serial Number' }, content);
+            return;
+        }
+
+        // Edge Case: Check for missing Capacity
+        if (!part.capacity || part.capacity.trim() === '') {
+            const content = `
+                <p><strong>Capacity is missing for this part.</strong></p>
+                <p>Please provide a valid capacity for part: ${partSn}.</p>
+            `;
+            showModal({ title: 'Error: Missing Capacity' }, content);
+            return;
+        }
+
+        // Edge Case: Check for missing Type
+        if (!part.type || part.type.trim() === '') {
+            const content = `
+                <p><strong>Type is missing for this part.</strong></p>
+                <p>Please provide a valid type for part: ${partSn}.</p>
+            `;
+            showModal({ title: 'Error: Missing Type' }, content);
+            return;
+        }
+
+        // Prepare the data to be sent to the server including Type and Capacity
+        const partData = {
+            Part_sn: partSn,
+            Type: part.type,
+            Capacity: part.capacity,
+            Size: dataObject.size,
+            Speed: dataObject.Speed,
+            Part_status: 'Out',
+            Unit_sn: unitSn,
+            Note: dataObject.note
+        };
+
+        $.ajax({
+            url: '/check_part_in_inventory',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(partData),
+            success: function (response) {
+                if (response.exists) {
+                    // Update status to 'Out'
+                    $.ajax({
+                        url: '/update_part_status',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            Part_sn: partSn,
+                            TID: dataObject.tid,
+                            Unit_sn: unitSn,
+                            Part_status: 'Out',
+                            Note: dataObject.note
+                        }),
+                        success: function (updateResponse) {
+                            partsTable.ajax.reload(null, false);
+                        },
+                        error: function (err) {
+                            console.error("Error updating part status: ", err);
+                        }
+                    });
+                } else {
+                    handleCheckOutErrors(response, partSn, partData);
                 }
-            });
+            },
+            error: function (err) {
+                console.error("Error checking part out inventory: ", err);
+                alert('Error checking part out inventory: ' + err.responseText);
+            }
         });
-    }
+    });
+}
+
     
     // New function to handle edge case errors during check-out
     function handleCheckOutErrors(response, partSn, partData) {

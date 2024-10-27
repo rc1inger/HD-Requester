@@ -465,15 +465,6 @@ def check_part_in_inventory():
     textarea_part_status = data.get('Part_status')
     unit_sn = data.get('Unit_sn')
 
-    # Edge case check for missing, whitespace-only, or invalid Unit Serial Number
-    if not unit_sn or unit_sn.strip() == '' or not unit_sn.isdigit() or len(unit_sn) < 5:
-        return jsonify({
-            'exists': False,
-            'error': 'missing_serial_number',
-            'message': 'Unit Serial Number is missing or invalid for the Parts Request.'
-        })
-
-
     # Edge case check for missing or whitespace-only Capacity
     if not textarea_capacity or textarea_capacity.strip() == '':
         return jsonify({
