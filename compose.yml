@@ -1,0 +1,11 @@
+services:
+  web:
+    image: ghcr.io/rc1inger/hd-requester:latest
+    container_name: hd-requester
+    ports:
+      - "8000:8000"
+    environment:
+      - TZ=America/Los_Angeles
+    volumes:
+      - /volume1/docker/hd/data:/app/data
+    restart: unless-stopped
