@@ -335,7 +335,7 @@ $(document).ready(function () {
         $(this).addClass('active');  // Add active class to the clicked month
 
         const month = $(this).data('month');
-        const year = new Date().getFullYear();
+        const year = new Date().getFullYear()-2;
         const activeButton = trendButtons.filter('.active').attr('id');
 
         // Determine which endpoint to call based on the active trend button
