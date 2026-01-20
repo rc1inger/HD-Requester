@@ -3,3 +3,4 @@
 Flask==3.0.2
 # sqlite3==3.40.0 installed from python libraries already
 argon2-cffi==21.3.0
+gunicorn
