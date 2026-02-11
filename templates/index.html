@@ -4,7 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Dynamic Parts Table</title>
+	<title>Dynamic Parts Table HD Requester</title>
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
 		integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 	<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
@@ -12,20 +12,12 @@
 	<link href="https://pro.fontawesome.com/releases/v5.10.1/css/all.css" rel="stylesheet">
 	<!-- Link index.css to index.html for css -->
 	<link href="{{ url_for('static', filename='css/index.css') }}" rel="stylesheet"> <!-- Updated path -->
-
-	<!--UI revisions ksaludo-->
-	<link href="{{ url_for('static', filename='css/index2.css') }}" rel="stylesheet"> <!-- Updated path -->
 	<!-- DataTables CSS for Sorting and Searching -->
 	<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-
-	
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:ital,wght@0,100..900;1,100..900&family=Gabarito:wght@400..900&family=Markazi+Text:wght@400..700&family=Pridi:wght@500;600;700&display=swap" rel="stylesheet">
-
-
 </head>
-
 <body>
 	<nav>
 		<div class="logo">HD Requester</div>
@@ -33,7 +25,6 @@
             <i class="fas fa-bars"></i>
         </button>
 	</nav>
-
 	<div id="sidebar" class="sidebar">
         <ul class="adminLogin">
 			<li>
@@ -49,7 +40,6 @@
 			</li>		
 		</ul>
     </div>
-
 	<div class="container-fluid">
 		<div class="row">
 			<div id="left-sidebar-check-inout" class="col-sm-3">
@@ -62,7 +52,6 @@ Laptop
 00000001
 00000002
 			</textarea>
-
 				<div id="btn-group-inout" class="btn-group" role="group" aria-label="Basic radio toggle button group">
 					<input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off">
 					<label id="btnIn" class="btn btn-secondary" for="btnradio1">IN</label>
@@ -188,7 +177,5 @@ Laptop
 			alert("Team Members:\n- Rick Clinger\n- Salvador Del Rio Torres\n- Kaylyn Saludo\n- Mohammad Othman\n- Juan Valentin Mendez\n- Hamza Kassem\n- Abdul Karim Nushin\n- Delia Nepomuseno Hernandez\n- Saboor Malik");
 		}
 	</script>
-
 </body>
-
 </html>
